@@ -29,7 +29,7 @@ void loop() {
     Serial.print(',');
 
     // 4th sensor not set up yet
-    Serial.print(512);
+    Serial.print(850);
     Serial.print('\n');
 
     delay(750);
