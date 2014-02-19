@@ -1,5 +1,7 @@
 import ddf.minim.*;
 import ddf.minim.analysis.*;
+import processing.serial.*;
+
  
 Minim minim;
 AudioPlayer beats;
@@ -17,10 +19,23 @@ float gain = 0.5;
 float GAIN_MAX = 6;
 float GAIN_MIN = -80;
 float gain_step_size = 1;
+float[] gainLevels;
+
+// Serial reading
+String serialMsg = "";
+String[] stringValues;
+Serial myPort;
  
 void setup() {
   size(512, 200);
  
+  println(Serial.list());
+
+  myPort = new Serial(this, "/dev/cu.usbmodemfa131", 9600);
+
+  // Read first line incase its a partial message
+  myPort.readStringUntil('\n');
+
   // always start Minim first!
   minim = new Minim(this);
  
@@ -43,6 +58,7 @@ void setup() {
   shaker.loop();
   vinyl.loop();
 
+  gainLevels = new float[playersList.length];
 
   // an FFT needs to know how 
   // long the audio buffers it will be analyzing are
@@ -80,6 +96,32 @@ void draw() {
     line(i, 50 + beats.left.get(i)*50, i+1, 50 + beats.left.get(i+1)*50);
     line(i, 150 + beats.right.get(i)*50, i+1, 150 + beats.right.get(i+1)*50);
   }
+
+  setGainLevels();
+}
+
+void setGainLevels(){
+  setGainStringValuesFromSerialRead();
+
+
+  for(int i = 0; i < stringValues.length; i++) {
+    float f = new Float(stringValues[i]);
+    float mappedLevel = map(f, 0, 1024, -30, 4);
+    playersList[i].setGain(mappedLevel);
+  }
+}
+
+void setGainStringValuesFromSerialRead(){
+
+  if(myPort.available() > 0){
+    serialMsg = myPort.readStringUntil('\n');
+
+    if(serialMsg != null) {
+      println("Recvd = " + serialMsg);
+      stringValues = serialMsg.split(",");
+    }
+  }
+
 }
 
 void keyPressed() {
