@@ -9,6 +9,8 @@ AudioPlayer synbass;
 AudioPlayer shaker;
 AudioPlayer vinyl;
 
+AudioPlayer snap;
+
 AudioPlayer[] playersList;
 
 FFT fft;
@@ -38,6 +40,9 @@ void setup() {
 
   // always start Minim first!
   minim = new Minim(this);
+
+  //Snap testing
+  snap = minim.loadFile("snap.mp3", 512);
  
   // specify 512 for the length of the sample buffers
   // the default buffer size is 1024
@@ -52,11 +57,15 @@ void setup() {
   playersList[2] = shaker;
   playersList[3] = vinyl;
 
+  for(int i =0; i < playersList.length; i++) {
+    playersList[i].setGain(-80);
+  }
+
 
   beats.loop();
   synbass.loop();
-  shaker.loop();
-  vinyl.loop();
+  // shaker.loop();
+  // vinyl.loop();
 
   gainLevels = new float[playersList.length];
 
@@ -106,7 +115,7 @@ void setGainLevels(){
 
   for(int i = 0; i < stringValues.length; i++) {
     float f = new Float(stringValues[i]);
-    float mappedLevel = map(f, 0, 1024, -30, 4);
+    float mappedLevel = map(f, 0, 900, -60, 8);
     playersList[i].setGain(mappedLevel);
   }
 }
@@ -161,6 +170,15 @@ void keyPressed() {
       }
       playersList[volumeMode].setGain(gain);
       break;
+
+    case 'p':
+      snap.rewind();
+      snap.play();
+      break;
+    case 'r':
+      snap.rewind();
+      break;
+
     default:
       println("Unsupported keypress: " + key);
   }
