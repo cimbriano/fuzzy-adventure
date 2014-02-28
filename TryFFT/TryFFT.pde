@@ -51,11 +51,15 @@ void setup() {
   shaker = minim.loadFile("Shaker.mp3", 512);
   vinyl = minim.loadFile("Vinyl.mp3", 512);
 
+  
+
   playersList = new AudioPlayer[4];
   playersList[0] = beats;
   playersList[1] = synbass;
   playersList[2] = shaker;
   playersList[3] = vinyl;
+
+
 
   for(int i =0; i < playersList.length; i++) {
     playersList[i].setGain(-80);
@@ -64,7 +68,7 @@ void setup() {
 
   beats.loop();
   synbass.loop();
-  // shaker.loop();
+  shaker.loop();
   // vinyl.loop();
 
   gainLevels = new float[playersList.length];
