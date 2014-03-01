@@ -3,15 +3,9 @@ import ddf.minim.analysis.*;
 import ddf.minim.spi.*; // for AudioRecordingStream
 import ddf.minim.ugens.*;
 import processing.serial.*;
-
  
 Minim minim;
 AudioOutput out;
-
-AudioRecordingStream beatsFile;
-AudioRecordingStream synbassFile;
-AudioRecordingStream shakerFile;
-AudioRecordingStream vinylFile;
 
 Gain beatsGain;
 Gain synbassGain;
@@ -22,7 +16,6 @@ FilePlayer beats;
 FilePlayer synbass;
 FilePlayer shaker;
 FilePlayer vinyl;
-// FilePlayer[] players;
 
 Summer sum;
 
@@ -31,17 +24,14 @@ Delay myDelay;
 Flanger myFlange;
 MoogFilter myMoog;
 
-
 // FFT fft;
+// AudioPlayer beatsForFFT;
 
-// int volumeMode = 1;
 
 float gain = 0.5;
-float GAIN_MAX = 6.f;
+float GAIN_MAX = 10.f;
 float GAIN_MIN = -80.f;
 float gain_step_size = 1;
-
-
 
 // Serial reading
 String serialMsg = "";
@@ -66,20 +56,20 @@ void setup() {
   myDelay = new Delay();
   myCrush = new BitCrush(16.f, 44100.f);
   myFlange = new Flanger(
-                        1000,     // delay length in milliseconds ( clamped to [0,100] )
-                        0.2f,   // lfo rate in Hz ( clamped at low end to 0.001 )
-                        1000,     // delay depth in milliseconds ( minimum of 0 )
-                        0.5f,   // amount of feedback ( clamped to [0,1] )
-                        0.5f,   // amount of dry signal ( clamped to [0,1] )
-                        0.5f    // amount of wet signal ( clamped to [0,1] )
+                        1,     // delay length in milliseconds ( clamped to [0,100] )
+                        1.f,   // lfo rate in Hz ( clamped at low end to 0.001 )
+                        1,     // delay depth in milliseconds ( minimum of 0 )
+                        0.4f,   // amount of feedback ( clamped to [0,1] )
+                        0.4f,   // amount of dry signal ( clamped to [0,1] )
+                        0.8f    // amount of wet signal ( clamped to [0,1] )
                         );
   myMoog = new MoogFilter(1200, 0.5);
 
 
-  beatsFile = minim.loadFileStream("beats.mp3", 1024, true);
-  synbassFile = minim.loadFileStream("SynBass.mp3",  1024, true);
-  shakerFile = minim.loadFileStream("Shaker.mp3", 1024, true);
-  vinylFile = minim.loadFileStream("Vinyl.mp3", 1024, true);
+  AudioRecordingStream beatsFile = minim.loadFileStream("beats.mp3", 1024, true);
+  AudioRecordingStream synbassFile = minim.loadFileStream("SynBass.mp3",  1024, true);
+  AudioRecordingStream shakerFile = minim.loadFileStream("Shaker.mp3", 1024, true);
+  AudioRecordingStream vinylFile = minim.loadFileStream("Vinyl.mp3", 1024, true);
 
   beats = new FilePlayer(beatsFile);
   synbass = new FilePlayer(synbassFile);
@@ -97,29 +87,18 @@ void setup() {
   vinyl.loop(1);
 
   // sum.patch(beats);
-  beats.patch(beatsGain).patch(out);
-  synbass.patch(synbassGain).patch(myMoog).patch(out);
+  beats.patch(beatsGain).patch(myCrush).patch(out);
+  synbass.patch(synbassGain).patch(out);
   shaker.patch(shakerGain).patch(out);
-  vinyl.patch(vinylGain).patch(myCrush).patch(out);
+  vinyl.patch(vinylGain).patch(out);
 
-  // specify 512 for the length of the sample buffers
-  // the default buffer size is 1024
-  // beats = minim.loadFile("beats.mp3", 512);
-  // synbass = minim.loadFile("SynBass.mp3", 512);
-  // shaker = minim.loadFile("Shaker.mp3", 512);
-  // vinyl = minim.loadFile("Vinyl.mp3", 512);
-
-  // players = new FilePlayer[4];
-  // players[0] = beats;
-  // players[1] = synbass;
-  // players[2] = shaker;
-  // players[3] = vinyl;
 
   // an FFT needs to know how 
   // long the audio buffers it will be analyzing are
   // and also needs to know 
   // the sample rate of the audio it is analyzing
-  // fft = new FFT(beats.bufferSize(), beats.sampleRate());
+  // beatsForFFT = minim.loadFile("beats.mp3", 512);
+  // fft = new FFT(beatsForFFT.bufferSize(), beatsForFFT.sampleRate());
 }
  
 void draw() {
@@ -127,7 +106,7 @@ void draw() {
   // first perform a forward fft on one of song's buffers
   // I'm using the mix buffer
   //  but you can use any one you like
-  // fft.forward(beats.mix);
+  // fft.forward(beatsForFFT.mix);
  
   stroke(255, 0, 0, 128);
   // draw the spectrum as a series of vertical lines
@@ -146,10 +125,10 @@ void draw() {
   // this means that they have values between -1 and 1. 
   // If we don't scale them up our waveform 
   // will look more or less like a straight line.
-  // for(int i = 0; i < beats.left.size() - 1; i++)
+  // for(int i = 0; i < beatsForFFT.left.size() - 1; i++)
   // {
-  //   line(i, 50 + beats.left.get(i)*50, i+1, 50 + beats.left.get(i+1)*50);
-  //   line(i, 150 + beats.right.get(i)*50, i+1, 150 + beats.right.get(i+1)*50);
+  //   line(i, 50 + beatsForFFT.left.get(i)*50, i+1, 50 + beatsForFFT.left.get(i+1)*50);
+  //   line(i, 150 + beatsForFFT.right.get(i)*50, i+1, 150 + beatsForFFT.right.get(i+1)*50);
   // }
 
   getParameterLevelsFromSerialRead();
@@ -173,18 +152,19 @@ void getParameterLevelsFromSerialRead(){
       vinylGain.setValue(mapGainLevelFromString(stringValues[3]));
 
       myCrush.setBitRes(mapCrushLevelFromString(stringValues[4]));
+
     }
   }
 }
 
 float mapCrushLevelFromString(String val) {
   float f = new Float(val);
-  return map(f, 40, 1010, 5, 16);
+  return map(f, 30, 1010, 5, 16);
 }
 
 float mapGainLevelFromString(String val){
   float f = new Float(val);
-  return map(f, 0, 900, -60, 8);
+  return map(f, 0, 900, GAIN_MIN, GAIN_MAX);
 }
 
 // void keyPressed() {
