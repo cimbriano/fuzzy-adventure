@@ -11,6 +11,9 @@ int touchMembraneReading;
 int touchMembraneInPin2 = 3;
 int touchMembraneReading2;
 
+int irInPin = 4;
+int irReading;
+
 void setup() {
     Serial.begin(9600);
 }
@@ -34,6 +37,10 @@ void loop() {
     touchMembraneReading2 = analogRead(touchMembraneInPin2);
     // Serial.print(touchMembraneReading2);
     Serial.print(512);
+    Serial.print(',');
+
+    irReading = analogRead(irInPin);
+    Serial.print(irReading);
     Serial.print('\n');
 
     delay(750);

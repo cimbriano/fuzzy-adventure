@@ -13,10 +13,16 @@ AudioRecordingStream synbassFile;
 AudioRecordingStream shakerFile;
 AudioRecordingStream vinylFile;
 
+Gain beatsGain;
+Gain synbassGain;
+Gain shakerGain;
+Gain vinylGain;
+
 FilePlayer beats;
 FilePlayer synbass;
 FilePlayer shaker;
 FilePlayer vinyl;
+// FilePlayer[] players;
 
 Summer sum;
 
@@ -25,17 +31,17 @@ Delay myDelay;
 Flanger myFlange;
 MoogFilter myMoog;
 
-// AudioPlayer[] playersList;
 
 // FFT fft;
 
 // int volumeMode = 1;
 
 float gain = 0.5;
-float GAIN_MAX = 6;
-float GAIN_MIN = -80;
+float GAIN_MAX = 6.f;
+float GAIN_MIN = -80.f;
 float gain_step_size = 1;
-float[] gainLevels;
+
+
 
 // Serial reading
 String serialMsg = "";
@@ -58,7 +64,7 @@ void setup() {
   sum = new Summer();
 
   myDelay = new Delay();
-  myCrush = new BitCrush(5.f, 44100.f);
+  myCrush = new BitCrush(16.f, 44100.f);
   myFlange = new Flanger(
                         1000,     // delay length in milliseconds ( clamped to [0,100] )
                         0.2f,   // lfo rate in Hz ( clamped at low end to 0.001 )
@@ -80,16 +86,21 @@ void setup() {
   shaker = new FilePlayer(shakerFile);
   vinyl = new FilePlayer(vinylFile);
 
+  beatsGain = new Gain(GAIN_MIN);
+  synbassGain = new Gain(GAIN_MIN);
+  shakerGain = new Gain(GAIN_MIN);
+  vinylGain = new Gain(GAIN_MIN);
+
   beats.loop(1);
   synbass.loop(1);
   shaker.loop(1);
   vinyl.loop(1);
 
-  sum.patch(beats);
-  // beats.patch(out);
-  synbass.patch(myMoog).patch(out);
-  // shaker.patch(out);
-  // vinyl.patch(myCrush).patch(out);
+  // sum.patch(beats);
+  beats.patch(beatsGain).patch(out);
+  synbass.patch(synbassGain).patch(myMoog).patch(out);
+  shaker.patch(shakerGain).patch(out);
+  vinyl.patch(vinylGain).patch(myCrush).patch(out);
 
   // specify 512 for the length of the sample buffers
   // the default buffer size is 1024
@@ -98,19 +109,11 @@ void setup() {
   // shaker = minim.loadFile("Shaker.mp3", 512);
   // vinyl = minim.loadFile("Vinyl.mp3", 512);
 
-  // playersList = new AudioPlayer[4];
-  // playersList[0] = beats;
-  // playersList[1] = synbass;
-  // playersList[2] = shaker;
-  // playersList[3] = vinyl;
-
-
-
-  // for(int i =0; i < playersList.length; i++) {
-  //   playersList[i].setGain(-80);
-  // }
-
-  // gainLevels = new float[playersList.length];
+  // players = new FilePlayer[4];
+  // players[0] = beats;
+  // players[1] = synbass;
+  // players[2] = shaker;
+  // players[3] = vinyl;
 
   // an FFT needs to know how 
   // long the audio buffers it will be analyzing are
@@ -149,32 +152,40 @@ void draw() {
   //   line(i, 150 + beats.right.get(i)*50, i+1, 150 + beats.right.get(i+1)*50);
   // }
 
-  // setGainLevels();
+  getParameterLevelsFromSerialRead();
 }
 
-// void setGainLevels(){
-//   setGainStringValuesFromSerialRead();
+void getParameterLevelsFromSerialRead(){
 
+  if(myPort.available() > 0){
+    serialMsg = myPort.readStringUntil('\n');
 
-//   for(int i = 0; i < stringValues.length; i++) {
-//     float f = new Float(stringValues[i]);
-//     float mappedLevel = map(f, 0, 900, -60, 8);
-//     playersList[i].setGain(mappedLevel);
-//   }
-// }
+    if(serialMsg != null) {
+      println("Recvd = " + serialMsg);
+      stringValues = serialMsg.split(",");
 
-// void setGainStringValuesFromSerialRead(){
+      // Bail if there are not 5 elements in this array
+      if(stringValues.length != 5) return;
 
-//   if(myPort.available() > 0){
-//     serialMsg = myPort.readStringUntil('\n');
+      beatsGain.setValue(mapGainLevelFromString(stringValues[0]));
+      synbassGain.setValue(mapGainLevelFromString(stringValues[1]));
+      shakerGain.setValue(mapGainLevelFromString(stringValues[2]));
+      vinylGain.setValue(mapGainLevelFromString(stringValues[3]));
 
-//     if(serialMsg != null) {
-//       println("Recvd = " + serialMsg);
-//       stringValues = serialMsg.split(",");
-//     }
-//   }
+      myCrush.setBitRes(mapCrushLevelFromString(stringValues[4]));
+    }
+  }
+}
 
-// }
+float mapCrushLevelFromString(String val) {
+  float f = new Float(val);
+  return map(f, 40, 1010, 5, 16);
+}
+
+float mapGainLevelFromString(String val){
+  float f = new Float(val);
+  return map(f, 0, 900, -60, 8);
+}
 
 // void keyPressed() {
 //   print(key);
@@ -227,6 +238,7 @@ void draw() {
 //   }
 
 // }
+
 
 void mouseMoved(){
   float freq = constrain( map( mouseX, 0, width, 200, 12000 ), 200, 12000 );
