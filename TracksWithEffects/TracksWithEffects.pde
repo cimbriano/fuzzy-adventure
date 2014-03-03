@@ -19,10 +19,9 @@ FilePlayer vinyl;
 
 Summer sum;
 
-BitCrush myCrush;
-Delay myDelay;
-Flanger myFlange;
-MoogFilter myMoog;
+BitCrush beatsCrush;
+BitCrush synbassCrush;
+BitCrush vinylCrush;
 
 // FFT fft;
 // AudioPlayer beatsForFFT;
@@ -31,6 +30,7 @@ MoogFilter myMoog;
 float gain = 0.5;
 float GAIN_MAX = 10.f;
 float GAIN_MIN = -80.f;
+float SHAKER_GAIN = -10.f;
 float gain_step_size = 1;
 
 // Serial reading
@@ -53,18 +53,9 @@ void setup() {
   out = minim.getLineOut(Minim.MONO, 512);
   sum = new Summer();
 
-  myDelay = new Delay();
-  myCrush = new BitCrush(16.f, 44100.f);
-  myFlange = new Flanger(
-                        1,     // delay length in milliseconds ( clamped to [0,100] )
-                        1.f,   // lfo rate in Hz ( clamped at low end to 0.001 )
-                        1,     // delay depth in milliseconds ( minimum of 0 )
-                        0.4f,   // amount of feedback ( clamped to [0,1] )
-                        0.4f,   // amount of dry signal ( clamped to [0,1] )
-                        0.8f    // amount of wet signal ( clamped to [0,1] )
-                        );
-  myMoog = new MoogFilter(1200, 0.5);
-
+  beatsCrush = new BitCrush(16.f, 44100.f);
+  synbassCrush = new BitCrush(16.f, 44100.f);
+  vinylCrush = new BitCrush(16.f, 44100.f);
 
   AudioRecordingStream beatsFile = minim.loadFileStream("beats.mp3", 1024, true);
   AudioRecordingStream synbassFile = minim.loadFileStream("SynBass.mp3",  1024, true);
@@ -76,9 +67,11 @@ void setup() {
   shaker = new FilePlayer(shakerFile);
   vinyl = new FilePlayer(vinylFile);
 
+  shakerGain = new Gain(GAIN_MIN);
+  shakerGain.setValue(SHAKER_GAIN);
+
   beatsGain = new Gain(GAIN_MIN);
   synbassGain = new Gain(GAIN_MIN);
-  shakerGain = new Gain(GAIN_MIN);
   vinylGain = new Gain(GAIN_MIN);
 
   beats.loop(1);
@@ -86,11 +79,11 @@ void setup() {
   shaker.loop(1);
   vinyl.loop(1);
 
-  // sum.patch(beats);
-  beats.patch(beatsGain).patch(myCrush).patch(out);
-  synbass.patch(synbassGain).patch(out);
   shaker.patch(shakerGain).patch(out);
-  vinyl.patch(vinylGain).patch(out);
+
+  beats.patch(beatsGain).patch(beatsCrush).patch(out);
+  synbass.patch(synbassGain).patch(synbassCrush).patch(out);  
+  vinyl.patch(vinylGain).patch(vinylCrush).patch(out);
 
 
   // an FFT needs to know how 
@@ -141,17 +134,36 @@ void getParameterLevelsFromSerialRead(){
 
     if(serialMsg != null) {
       println("Recvd = " + serialMsg);
-      stringValues = serialMsg.split(",");
+      stringValues = serialMsg.trim().split(",");
 
       // Bail if there are not 5 elements in this array
-      if(stringValues.length != 5) return;
+      if(stringValues.length != 7) return;
+      
 
-      beatsGain.setValue(mapGainLevelFromString(stringValues[0]));
-      synbassGain.setValue(mapGainLevelFromString(stringValues[1]));
-      shakerGain.setValue(mapGainLevelFromString(stringValues[2]));
-      vinylGain.setValue(mapGainLevelFromString(stringValues[3]));
+      if(stringValues[6].equals("1")) {
 
-      myCrush.setBitRes(mapCrushLevelFromString(stringValues[4]));
+        shakerGain.setValue(SHAKER_GAIN);
+
+        beatsGain.setValue(mapGainLevelFromString(stringValues[0]));
+        beatsCrush.setBitRes(mapCrushLevelFromString(stringValues[4]));
+
+        synbassGain.setValue(mapGainLevelFromString(stringValues[1]));
+        synbassCrush.setBitRes(mapCrushLevelFromString(stringValues[5]));
+
+        vinylGain.setValue(mapGainLevelFromString(stringValues[3]));
+        vinylCrush.setBitRes(mapCrushLevelFromString(stringValues[2]));
+        
+
+      } else {
+
+        beatsGain.setValue(GAIN_MIN);
+        synbassGain.setValue(GAIN_MIN);
+        shakerGain.setValue(GAIN_MIN);
+        vinylGain.setValue(GAIN_MIN);
+
+      }
+
+      
 
     }
   }
@@ -218,12 +230,3 @@ float mapGainLevelFromString(String val){
 //   }
 
 // }
-
-
-void mouseMoved(){
-  float freq = constrain( map( mouseX, 0, width, 200, 12000 ), 200, 12000 );
-  float rez  = constrain( map( mouseY, height, 0, 0, 1 ), 0, 1 );
-  
-  myMoog.frequency.setLastValue( freq );
-  myMoog.resonance.setLastValue( rez  );
-}
