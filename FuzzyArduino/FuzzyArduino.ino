@@ -30,22 +30,18 @@ void setup() {
 void loop() {
     pressureReading = analogRead(pressureInPin);
     Serial.print(pressureReading);
-    // Serial.print(650);
     Serial.print(',');
 
     pressureReading2 = analogRead(pressureInPin2);
     Serial.print(pressureReading2);
-    // Serial.print(650);
     Serial.print(',');
 
     touchMembraneReading = analogRead(touchMembraneInPin);
     Serial.print(touchMembraneReading);
-    // Serial.print(650);
     Serial.print(',');
 
     touchMembraneReading2 = analogRead(touchMembraneInPin2);
     Serial.print(touchMembraneReading2);
-    // Serial.print(650);
     Serial.print(',');
 
     lightReading = analogRead(lightSensorPin);

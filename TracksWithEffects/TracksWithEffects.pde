@@ -171,7 +171,7 @@ void getParameterLevelsFromSerialRead(){
 
 float mapCrushLevelFromString(String val) {
   float f = new Float(val);
-  return map(f, 30, 1010, 5, 16);
+  return map(f, 30, 1010, 16, 5);
 }
 
 float mapGainLevelFromString(String val){
